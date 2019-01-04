@@ -1,6 +1,6 @@
 {
-  "name": "@mapbox/tiny-sdf",
-  "version": "1.1.0",
+  "name": "tiny-sdf",
+  "version": "1.2.0",
   "description": "Browser-side SDF font generator",
   "main": "index.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mapbox/tiny-sdf.git"
+    "url": "git+https://github.com/diniden/tiny-sdf.git"
   },
   "keywords": [
     "sdf",
@@ -18,7 +18,7 @@
     "text",
     "distance transform"
   ],
-  "author": "Vladimir Agafonkin",
+  "author": "Vladimir Agafonkin with Diniden",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/mapbox/tiny-sdf/issues"
