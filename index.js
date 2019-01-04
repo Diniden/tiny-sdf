@@ -1,3 +1,10 @@
+/**
+ * This file represents tiny-sdf as was completed at https://github.com/mapbox/tiny-sdf.
+ *
+ * Here we center the glyph before rendering it as an SDF glyph and we provide a vector to indicate
+ * where within the glyph box the character is located. This is in place to aid in kerning, measurement,
+ * and precise placement of glyphs.
+ */
 'use strict';
 
 module.exports = TinySDF;
@@ -35,8 +42,16 @@ function TinySDF(fontSize, buffer, radius, cutoff, fontFamily, fontWeight) {
 }
 
 TinySDF.prototype.draw = function (char) {
+    // Validate input
+    if (!char || !char[0]) return new Uint8ClampedArray(0);
+    // Ensure a single character is rendered and not a string of chars
+    var singleChar = char[0];
+
     this.ctx.clearRect(0, 0, this.size, this.size);
-    this.ctx.fillText(char, this.buffer, this.middle);
+    this.ctx.fillText(singleChar, this.buffer, this.middle);
+
+    // Center the rendered glyph within our canvas
+    var bounds = centerContents(this.ctx);
 
     var imgData = this.ctx.getImageData(0, 0, this.size, this.size);
     var alphaChannel = new Uint8ClampedArray(this.size * this.size);
@@ -55,8 +70,84 @@ TinySDF.prototype.draw = function (char) {
         alphaChannel[i] = Math.max(0, Math.min(255, Math.round(255 - 255 * (d / this.radius + this.cutoff))));
     }
 
-    return alphaChannel;
+    return {
+        glyph: alphaChannel,
+        bounds: bounds,
+    };
 };
+
+/**
+ * This analyzes the input canvas and centers the rendered character within the canvas
+ */
+function centerContents(ctx) {
+    var size = ctx.canvas.width;
+    var bounds = measureContents(ctx);
+    var newX = (size - bounds.width) / 2.0;
+    var newY = (size - bounds.height) / 2.0;
+    var glyphData = ctx.getImageData(bounds.x, bounds.y, bounds.width, bounds.height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, size, size);
+    ctx.putImageData(glyphData, newX, newY);
+
+    return bounds;
+}
+
+/**
+ * This measures the contents of what is inside the canvas assumming the rendered values are only white
+ */
+function measureContents(canvasContext) {
+    var { width, height } = canvasContext.canvas;
+    var imageData = canvasContext.getImageData(0, 0, width, height).data;
+    var r;
+
+    var minY = Number.MAX_SAFE_INTEGER;
+    var minX = Number.MAX_SAFE_INTEGER;
+    var maxX = Number.MIN_SAFE_INTEGER;
+    var maxY = Number.MIN_SAFE_INTEGER;
+
+    // Search for first top left pixel that is filled
+    for (var i = 0; i < width; ++i) {
+        for (var k = 0; k < height; ++k) {
+            var redIndex = k * (width * 4) + i * 4;
+            r = imageData[redIndex];
+
+            if (r > 0.0) {
+                minY = min(minY, k);
+                minX = min(minX, i);
+                // We found the top left, stop searcing
+                i = width;
+                k = height;
+            }
+        }
+    }
+
+    // Search for bottom right pixel that is filled
+    for (var i = width - 1; i >= 0; --i) {
+        for (var k = height - 1; k >= 0; --k) {
+            var redIndex = k * (width * 4) + i * 4;
+            r = imageData[redIndex];
+
+            if (r > 0.0) {
+                maxX = max(maxX, i);
+                maxY = max(maxY, k);
+                // We found the bottom right, stop searching
+                i = -1;
+                k = -1;
+            }
+        }
+    }
+
+    // The identified pixel needs to be encased and not a direct target
+    minY -= 1;
+    maxY += 2;
+    maxX += 2;
+    minX -= 1;
+
+    minY = max(minY, 0);
+    minX = max(minX, 0);
+
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
 
 // 2D Euclidean distance transform by Felzenszwalb & Huttenlocher https://cs.brown.edu/~pff/papers/dt-final.pdf
 function edt(data, width, height, f, d, v, z) {
