@@ -96,7 +96,10 @@ function centerContents(ctx) {
  * This measures the contents of what is inside the canvas assumming the rendered values are only white
  */
 function measureContents(canvasContext) {
-    var { width, height } = canvasContext.canvas;
+    var width = canvasContext.canvas.width;
+    var height = canvasContext.canvas.height;
+    var max = Math.max;
+    var min = Math.min;
     var imageData = canvasContext.getImageData(0, 0, width, height).data;
     var r;
 
